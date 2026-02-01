@@ -1,0 +1,7 @@
+
+pynvml
+prometheus_client
+
+prometheus-client
+pynvml
+docker
