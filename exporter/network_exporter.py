@@ -26,7 +26,9 @@ def main():
     print("Network topology exporter running on :9500/metrics")
 
     # In real systems this would loop over all containers
-    target_container = "cadvisor"
+    #target_container = "cadvisor"
+    target_container = "bridge-test"
+
 
     while True:
         publish_network_topology(target_container)
