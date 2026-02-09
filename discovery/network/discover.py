@@ -27,7 +27,7 @@ def discover_network_topology(container_name: str):
     net["bridge"] = bridge or "direct-or-host"
 
     # Resolve physical NIC
-    nic = get_physical_nic()
+    nic = get_physical_nic(pid)
 
     return {
         "container": container_name,
