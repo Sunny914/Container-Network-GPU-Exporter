@@ -1,24 +1,47 @@
 import subprocess
 
-def get_physical_nic(pid: int):
-    try:
-        out = subprocess.check_output(
-            ["nsenter", "-t", str(pid), "-n", "ip", "route", "get", "8.8.8.8"],
-            text=True
-        ).strip()
 
-        if not out:
-            return "unknown"
+def get_physical_nic() -> str:
+    """
+    Determine the physical NIC used for outbound traffic
+    using host routing table.
+    """
+    cmd = ["ip", "route", "get", "8.8.8.8"]
+    output = subprocess.check_output(cmd, text=True)
 
-        parts = out.split()
+    parts = output.split()
+    if "dev" in parts:
+        return parts[parts.index("dev") + 1]
 
-        if "dev" in parts:
-            return parts[parts.index("dev") + 1]
+    return "unknown"
 
-        return "unknown"
 
-    except Exception:
-        return "unknown"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
