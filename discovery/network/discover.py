@@ -1,4 +1,6 @@
-from .container_pid import get_container_pid
+# discovery/network/discover.py
+
+from .container_pid import get_container_metadata
 from .netns_inspect import get_container_net_info
 from .veth_mapper import get_host_veth
 from .bridge_mapper import get_bridge_for_veth
@@ -6,24 +8,28 @@ from .route_mapper import get_physical_nic
 
 
 def discover_network_topology(container_name: str) -> dict:
-    # Container metadata
-    meta = get_container_pid(container_name)
+    """
+    Discovers full container → network → physical NIC topology.
+    """
+
+    # 1️⃣ Container metadata (Docker SDK)
+    meta = get_container_metadata(container_name)
     pid = meta["pid"]
 
-    # Container namespace inspection
+    # 2️⃣ Container namespace inspection
     net = get_container_net_info(pid)
 
-    # Host veth resolution
+    # 3️⃣ Host veth resolution
     host_veth = get_host_veth(net.get("peer_ifindex"))
 
-    # Bridge resolution
+    # 4️⃣ Bridge resolution
     bridge = get_bridge_for_veth(host_veth)
 
-    # Physical NIC (HOST routing table)
+    # 5️⃣ Physical NIC (host routing table)
     physical_nic = get_physical_nic()
 
     return {
-        "container": container_name,
+        "container": meta["name"],
         "container_id": meta["container_id"],
         "pid": pid,
         "container_interface": net.get("interface"),
@@ -32,6 +38,7 @@ def discover_network_topology(container_name: str) -> dict:
         "bridge": bridge or "direct-or-host",
         "physical_nic": physical_nic,
     }
+
 
 
 
