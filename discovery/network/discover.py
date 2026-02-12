@@ -10,6 +10,9 @@ from .route_mapper import get_physical_nic
 def discover_network_topology(container_name: str) -> dict:
     """
     Discovers full container → network → physical NIC topology.
+def discover_network_topology(container_name: str) -> dict:
+    
+    Discovers full container → network → physical NIC topology.
     """
 
     # 1️⃣ Container metadata (Docker SDK)
@@ -18,12 +21,15 @@ def discover_network_topology(container_name: str) -> dict:
 
     # 2️⃣ Container namespace inspection
     net = get_container_net_info(pid)
+    #print("DEBUG NET:", net)
 
     # 3️⃣ Host veth resolution
     host_veth = get_host_veth(net.get("peer_ifindex"))
+    #print("DEBUG HOST_VETH:", host_veth)
 
     # 4️⃣ Bridge resolution
     bridge = get_bridge_for_veth(host_veth)
+    #print("DEBUG BRIDGE:", bridge)
 
     # 5️⃣ Physical NIC (host routing table)
     physical_nic = get_physical_nic()
@@ -38,6 +44,9 @@ def discover_network_topology(container_name: str) -> dict:
         "bridge": bridge or "direct-or-host",
         "physical_nic": physical_nic,
     }
+
+
+
 
 
 

@@ -1,12 +1,108 @@
+# discovery/network/netns_inspect.py
+
+
+import os
+from pyroute2 import NetNS
+
+def get_container_net_info(pid: int):
+    """
+    Discover container primary interface, IP and peer_ifindex
+    using pyroute2 inside container network namespace.
+    """
+
+    netns_path = f"/proc/{pid}/ns/net"
+
+    if not os.path.exists(netns_path):
+        return {"interface": None, "ip": None, "peer_ifindex": None}
+
+    with NetNS(netns_path) as ns:
+
+        # Get default route (AF_INET = 2)
+        routes = ns.get_default_routes(family=2)
+
+        if not routes:
+            return {"interface": None, "ip": None, "peer_ifindex": None}
+
+        route = routes[0]
+
+        iface_index = None
+        for attr in route["attrs"]:
+            if attr[0] == "RTA_OIF":
+                iface_index = attr[1]
+                break
+
+        if iface_index is None:
+            return {"interface": None, "ip": None, "peer_ifindex": None}
+
+        # Get link info
+        link = ns.get_links(iface_index)[0]
+        iface_name = link.get_attr("IFLA_IFNAME")
+
+        # Get IP address
+        addrs = ns.get_addr(index=iface_index)
+
+        ip_addr = None
+        if addrs:
+            ip = addrs[0].get_attr("IFA_ADDRESS")
+            prefix = addrs[0]["prefixlen"]
+            ip_addr = f"{ip}/{prefix}"
+
+    # Read peer ifindex from sysfs via container root
+    iflink_path = f"/proc/{pid}/root/sys/class/net/{iface_name}/iflink"
+
+    peer_ifindex = None
+    try:
+        with open(iflink_path) as f:
+            peer_ifindex = int(f.read().strip())
+    except Exception:
+        pass
+
+    return {
+        "interface": iface_name,
+        "ip": ip_addr,
+        "peer_ifindex": peer_ifindex,
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
 import subprocess
 import re
 
 
 def get_container_net_info(pid: int):
-    """
-    Discover container network interface, IP, and peer ifindex
-    by inspecting the container's default route.
-    """
+    
+   # Discover container network interface, IP, and peer ifindex
+   # by inspecting the container's default route.
+    
 
     # 1. Find default route inside container netns
     route_cmd = [
@@ -35,120 +131,4 @@ def get_container_net_info(pid: int):
         "ip": ip_match.group(1) if ip_match else None,
         "peer_ifindex": peer_match.group(1) if peer_match else None,
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-import subprocess
-import re
-
-
-def get_container_net_info(pid: int) -> dict:
-    
-    #Inspect container network namespace and extract:
-    #- container interface
-    #- container IP
-    #- peer ifindex (host veth index)
-    
-    cmd = ["nsenter", "-t", str(pid), "-n", "ip", "-o", "addr"]
-    output = subprocess.check_output(cmd, text=True)
-
-    for line in output.splitlines():
-        if "eth0@" in line:
-            # Example:
-            # 2: eth0@if151 inet 172.19.0.2/16 ...
-            iface = "eth0"
-
-            ip_match = re.search(r"inet (\S+)", line)
-            peer_match = re.search(r"@if(\d+)", line)
-
-            return {
-                "interface": iface,
-                "ip": ip_match.group(1) if ip_match else None,
-                "peer_ifindex": peer_match.group(1) if peer_match else None,
-            }
-
-    raise RuntimeError("eth0 not found in container network namespace")
-
-"""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-import subprocess
-import re
-
-def get_container_net_info(pid: int):
-    cmd = ["nsenter", "-t", str(pid), "-n", "ip", "-o", "addr"]
-    output = subprocess.check_output(cmd, text=True)
-    print(output)
-    for line in output.splitlines():
-        if "eth0" in line:
-            # example: eth0@if43 inet 172.18.0.3/16
-            iface = "eth0"
-            ip_match = re.search(r"inet (\S+)", line)
-            peer_match = re.search(r"@if(\d+)", line)
-
-            return {
-                "interface": iface,
-                "ip": ip_match.group(1) if ip_match else None,
-                "peer_ifindex": peer_match.group(1) if peer_match else None
-            }
-        
-
-    raise RuntimeError("eth0 not found in container netns")
-
 """
